@@ -8,7 +8,7 @@ Construir una plataforma que permita a cualquier dueño de sitio web agregar un 
 - Configurable sin programar (elegir modelo de IA, personalizar el comportamiento del bot)
 - Económico de operar (proveedores de IA gratuitos/baratos, con fallback automático si uno falla)
 
-**Fases futuras (no implementar todavía, solo tenerlas en mente):** chatbots para WhatsApp, Instagram, agentes más complejos para ecommerce, fine-tuning de un modelo propio.
+**Fases futuras (no implementar todavía, solo tenerlas en mente):** chatbots para WhatsApp, Instagram, agentes más complejos para ecommerce, fine-tuning de un modelo propio; módulo propio de autenticación (auth.py) que actúe como capa de abstracción sobre el proveedor real (InsForge, Supabase, u otro) — el resto del proyecto llamaría a funciones genéricas como login()/registrar_usuario()/verificar_sesion(), sin depender directamente de un proveedor específico. Esto da portabilidad si algún día se cambia de proveedor de auth, sin tener que rehacer el sistema completo.
 
 ## Arquitectura general: 3 capas independientes
 
