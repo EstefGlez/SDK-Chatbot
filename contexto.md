@@ -60,7 +60,7 @@ Si un chatbot tiene su propia `api_key` y `modelo_preferido` guardados en la bas
 
 - Interfaz donde el dueño del sitio configura su chatbot: elegir modelo de IA, pegar su propia API key (o usar la de la plataforma por defecto), personalizar el prompt de sistema, ver historial de conversaciones y feedback.
 - Al guardar cambios, escribe/actualiza el registro correspondiente en la base de datos.
-- **No hay autenticación** por decisión de diseño; cada cliente ve solo sus propios chatbots porque el filtrado se hace por `chatbot_id` asociado al usuario que lo crea (en un entorno real, se añadiría login).
+- **No hay autenticación** por decisión de diseño; actualmente cualquier persona con acceso al panel puede ver y editar todos los chatbots, ya que no hay separación por usuario (pendiente si se agrega autenticación en el futuro).
 
 ## 4. Base de datos (InsForge)
 
@@ -68,7 +68,7 @@ Usamos **InsForge** como backend as a service, que proporciona una base de datos
 
 Tablas mínimas para empezar:
 
-- **`chatbots`**: `id`, `nombre`, `api_key` (encriptada), `modelo_preferido`, `prompt_sistema`, `dueño_id`, `creado_en`
+- **`chatbots`**: `id`, `nombre`, `api_key`, `modelo_preferido`, `prompt_sistema`, `dueño_id`, `creado_en`
 - **`conversaciones`**: `id`, `chatbot_id`, `session_id`, `creado_en`
 - **`mensajes`**: `id`, `conversacion_id`, `rol` (user/assistant), `contenido`, `modelo_usado`, `timestamp`
 - **`feedback`**: `id`, `mensaje_id`, `calificacion`, `sugerencia_ia_auditora`, `aprobado` (booleano)
