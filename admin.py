@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import os
 import requests
 import uuid
+from encryption import encrypt_api_key
 
 router = APIRouter()
 
@@ -43,7 +44,7 @@ def create_or_update_chatbot(config: ChatbotConfig):
             "nombre": config.nombre,
             "modelo_preferido": config.modelo_preferido,
             "prompt_sistema": config.prompt_sistema,
-            "api_key": config.api_key  # TODO: encriptar antes de guardar
+            "api_key": encrypt_api_key(config.api_key) if config.api_key is not None else None
             # dueno_id y creado_en se manejan por defecto o se pueden agregar si es necesario
             # Para dueno_id, necesitamos saber el usuario actual (no implementado aún)
             # creado_en tiene valor por defecto en la base de datos

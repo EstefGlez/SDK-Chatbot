@@ -3,6 +3,7 @@ import requests
 from fastapi import APIRouter
 from pydantic import BaseModel
 from openai import OpenAI
+from encryption import decrypt_api_key
 
 router = APIRouter()
 
@@ -30,10 +31,13 @@ def get_chatbot_config(chatbot_id: str) -> dict:
         data = response.json()
         if data:
             record = data[0]
+            api_key = record.get("api_key")
+            if api_key is not None:
+                api_key = decrypt_api_key(api_key)
             return {
                 "system_prompt": record.get("prompt_sistema", "Eres un asistente de atención al cliente, amable y breve."),
                 "modelo_preferido": record.get("modelo_preferido"),
-                "api_key": record.get("api_key")
+                "api_key": api_key
             }
     except Exception as e:
         print(f"Error fetching chatbot config from InsForge: {e}")
