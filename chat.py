@@ -63,13 +63,13 @@ def get_or_create_conversation(chatbot_id: str, session_id: str) -> str:
         if data:
             return data[0]["id"]
         # Create new conversation
+        import uuid
+        conversation_id = str(uuid.uuid4())
         url = f"{INS_FORGE_BASE_URL}/conversaciones"
-        payload = [{"chatbot_id": chatbot_id, "session_id": session_id}]
+        payload = [{"id": conversation_id, "chatbot_id": chatbot_id, "session_id": session_id}]
         response = requests.post(url, headers=_insforge_headers(), json=payload)
         response.raise_for_status()
-        data = response.json()
-        if data:
-            return data[0]["id"]
+        return conversation_id
     except Exception as e:
         print(f"Error getting/creating conversation in InsForge: {e}")
         # Print response text if available (for InsForge API error details)
@@ -81,10 +81,7 @@ def get_or_create_conversation(chatbot_id: str, session_id: str) -> str:
         # Fallback: generate a temporary UUID-based ID (not persisted)
         import uuid
         return str(uuid.uuid4())
-    # Fallback
-    import uuid
-    return str(uuid.uuid4())
-
+    
 def save_message(conversacion_id: str, rol: str, contenido: str, modelo_usado: str | None) -> None:
     """
     Guarda un mensaje en la tabla `mensajes`.

@@ -15,7 +15,7 @@ nombre = st.text_input("Nombre del chatbot", value="Mi chatbot")
 
 modelo = st.selectbox(
     "Modelo de IA principal",
-    ["deepseek-ai/deepseek-v4-flash-0731", "llama-3.3-70b-versatile", "gemini-3.1-pro"],
+    ["deepseek-ai/deepseek-v4-flash-0731", "nvidia/nemotron-3-ultra-550b-a55b", "gemini-3.1-pro-preview"],
 )
 
 prompt_sistema = st.text_area(
