@@ -1,6 +1,6 @@
 # SDK-Chatbot: Chatbot IA Embebible para Sitios Web
 
-Un plataforma que permite a dueños de sitios web agregar un chatbot de IA a sus sitios mediante un simple fragmento de JavaScript. El sistema incluye un backend API (FastAPI), un panel de administración (Streamlit) y un widget de JavaScript vanilla, todo diseñado para ser fácil de instalar, configurable sin programar y económico de operar.
+Una plataforma que permite a dueños de sitios web agregar un chatbot de IA a sus sitios mediante un simple fragmento de JavaScript. El sistema incluye un backend API (FastAPI), un panel de administración (Streamlit) y un widget de JavaScript vanilla, diseñado para ser fácil de instalar, configurable sin programar y económico de operar.
 
 ## Arquitectura
 
@@ -10,15 +10,15 @@ El proyecto sigue una arquitectura de tres capas independientes:
    Se ejecuta en el navegador del visitante. Sólo conoce un `chatbot_id` público y se comunica con el backend mediante llamadas HTTP.
 
 2. **Backend API (Python + FastAPI)**  
-   El cerebro del sistema: recibe mensajes, resuelve la configuración del chatbot, llama a proveedores de IA con fallback automático, y guarda logs en base de datos.
+   El cerebro del sistema: recibe mensajes, resuelve la configuración del chatbot, llama a proveedores de IA con fallback automático, y guarda logs en la base de datos.
 
 3. **Panel de administración (Streamlit)**  
-   Interfaz donde el dueño del sitio configura su chatbot (elige modelo, API key, prompt de sistema, ve historial). Protegido con login y accesible en una URL separada.
+   Interfaz donde el dueño del sitio configura su chatbot (elige modelo, API key, prompt de sistema, ve historial). Accesible en una URL separada.
 
 ### Seguridad
 
 - El widget **nunca** expone API keys ni configuración sensible.
-- Las API keys se almacenan encriptadas en la base de datos.
+- Las API keys se almacenan en texto plano por ahora (encriptación pendiente, ver Próximos pasos).
 - CORS restringido a dominios autorizados (pendiente de implementar completamente).
 
 ## Tecnologías
@@ -28,10 +28,10 @@ El proyecto sigue una arquitectura de tres capas independientes:
 | Widget embebible    | JavaScript vanilla (ES6)                     |
 | Backend             | Python 3.9+, FastAPI, Uvicorn                |
 | Panel de admin      | Streamlit                                    |
-| Base de datos       | PostgreSQL (Neon o Supabase)                 |
-| Proveedores de IA   | NVIDIA NIM (DeepSeek, Nemotron), Groq, Gemini|
-| Despliegue backend  | Render (o similar)                           |
-| Despliegue admin    | Streamlit Community Cloud (o similar)        |
+| Base de datos       | InsForge (PostgreSQL)                        |
+| Proveedores de IA   | NVIDIA NIM (DeepSeek, Nemotron), Gemini      |
+| Sugerencia de hosting backend | Render (u otro servicio compatible)   |
+| Sugerencia de hosting admin | Streamlit Community Cloud (u otro)   |
 
 ## Estructura de archivos
 
@@ -56,15 +56,14 @@ SDK-Chatbot/
 Cree un archivo `.env` basado en `.env.example`:
 
 ```env
-# InsForge (PostgreSQL) - usado para almacenar configuración y logs
-INS_FORGE_BASE_URL=https://su-proyecto.supabase.co
-INS_FORGE_ANON_KEY=su_anon_key_aqui
+# InsForge - usado para almacenar configuración y logs
+INS_FORGE_BASE_URL=https://tu-insforge-instance.co
+INS_FORGE_ANON_KEY=tu_anon_key_aqui
 
 # Proveedores de IA (obtener claves de los respetivos servicios)
-DEEPSEEK_API_KEY=su_clave_deepseek
-NEMOTRON_API_KEY=su_clave_nemotron  # opcional
-GEMINI_API_KEY=su_clave_gemini
-# GROQ_API_KEY=su_clave_groq      # si se decide incluir Groq
+DEEPSEEK_API_KEY=tu_clave_deepseek
+NEMOTRON_API_KEY=tu_clave_nemotron  # opcional
+GEMINI_API_KEY=tu_clave_gemini
 ```
 
 ## Instalación y ejecución local
@@ -73,7 +72,7 @@ GEMINI_API_KEY=su_clave_gemini
 
 - Python 3.9+
 - pip
-- Cuenta en un proveedor de PostgreSQL (Neon, Supabase, etc.)
+- Cuenta en InsForge (o similar BaaS que proporcione URL y anon key)
 - Claves de API para al menos un proveedor de IA (DeepSeek vía NVIDIA NIM recomendado para iniciar)
 
 ### Pasos
@@ -109,7 +108,7 @@ GEMINI_API_KEY=su_clave_gemini
 6. **Probar el widget**
    Abra `test.html` en un navegador y verá el widget funcionando contra el backend local.
 
-## Uso en producción
+## Uso en producción (sugerencias)
 
 1. Despliegue el backend en un servicio como Render (usando `main:app`).
 2. Despliegue el panel de administración en Streamlit Community Cloud o similar.
@@ -124,7 +123,6 @@ GEMINI_API_KEY=su_clave_gemini
 
 - [ ] Implementar encriptación de API keys en la base de datos.
 - [ ] Añadir restricciones de CORS por dominio registrado.
-- [ ] Integrar Groq como proveedor de respaldo.
 - [ ] Mejorar el widget con temas personalizables y animaciones.
 - [ ] Añadir métricas y dashboard de uso en el panel de admin.
 - [ ] Soportar múltiples sesiones por usuario y memoria de conversación a largo plazo.
