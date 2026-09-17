@@ -14,7 +14,7 @@ Construir una plataforma que permita a cualquier dueño de sitio web agregar un 
 
 1. **Widget de chat (JavaScript vanilla)** — corre en el navegador del visitante, dentro del sitio web del cliente. No sabe nada de configuración ni de IA.
 2. **Backend API (Python + FastAPI)** — el cerebro del sistema: recibe mensajes, llama a los proveedores de IA con fallback, guarda todo en base de datos.
-3. **Panel de administración (Streamlit)** — donde el dueño del sitio configura su chatbot. Vive en una URL propia, protegida con login. Los visitantes del sitio del cliente nunca la ven.
+3. **Panel de administración (Streamlit)** — donde el dueño del sitio configura su chatbot. Vive en una URL propia, sin autenticación por decisión de diseño. Los visitantes del sitio del cliente nunca la ven.
 
 ### Regla de oro (seguridad)
 
@@ -44,22 +44,27 @@ El widget de JavaScript **jamás** debe contener API keys, nombres de modelos, n
 
 ### Cadena de fallback de proveedores de IA
 
-Pendiente de confirmar si se incluyen 2 o 3 proveedores (ver nota abajo). Todos compatibles con el formato de API de OpenAI, por lo que el código de llamada es casi idéntico entre ellos:
+La cadena de fallback es la siguiente (de más rápido a más lento):
 
 1. `deepseek-ai/deepseek-v4-flash-0731` vía **NVIDIA NIM** — modelo principal, optimizado para velocidad (MoE con solo 13B parámetros activos).
-2. **Groq** (`llama-3.3-70b-versatile` o similar) — respaldo de velocidad. *Nota: Groq (con "q") tiene tier gratis real y vigente en 2026 — no confundir con Grok (con "k") de xAI, que sí es de paga. Si se descartó por esta confusión, se puede reincorporar.*
-3. `nvidia/nemotron-3-super-120b-a12b` vía NVIDIA NIM — respaldo adicional. **Se descontinúa el 2 de octubre de 2026** — reemplazar por la versión vigente de Nemotron cuando llegue esa fecha.
-4. **Gemini** (la versión más capaz disponible, no la más rápida) — último recurso. Aquí ya no importa la velocidad, solo que no falle.
+2. `nvidia/nemotron-3-ultra-550b-a55b` vía NVIDIA NIM — respaldo de velocidad.
+3. `gemini-3.1-pro-preview` — último recurso. Aquí ya no importa la velocidad, solo que no falle.
 
 La lógica de fallback debe ir de más rápido a más lento, para que un fallo en el primer proveedor no te mande directo al más lento antes de intentar con uno rápido intermedio.
 
+### Fallback personalizado por chatbot
+
+Si un chatbot tiene su propia `api_key` y `modelo_preferido` guardados en la base de datos, el backend los usa como **primera opción** antes de caer en la cadena de fallback de la plataforma descrita arriba. Esto permite a los dueños de sitios usar sus propias claves y modelos si lo desean.
+
 ## 3. Panel de administración (Streamlit)
 
-- Login simple, cada cliente ve solo sus propios chatbots.
-- Formulario para: elegir modelo de IA, pegar su propia API key (o usar la de la plataforma por defecto), personalizar el prompt de sistema, ver historial de conversaciones y feedback.
+- Interfaz donde el dueño del sitio configura su chatbot: elegir modelo de IA, pegar su propia API key (o usar la de la plataforma por defecto), personalizar el prompt de sistema, ver historial de conversaciones y feedback.
 - Al guardar cambios, escribe/actualiza el registro correspondiente en la base de datos.
+- **No hay autenticación** por decisión de diseño; cada cliente ve solo sus propios chatbots porque el filtrado se hace por `chatbot_id` asociado al usuario que lo crea (en un entorno real, se añadiría login).
 
-## 4. Base de datos (Neon o Supabase)
+## 4. Base de datos (InsForge)
+
+Usamos **InsForge** como backend as a service, que proporciona una base de datos PostgreSQL gestionada.
 
 Tablas mínimas para empezar:
 
@@ -68,55 +73,58 @@ Tablas mínimas para empezar:
 - **`mensajes`**: `id`, `conversacion_id`, `rol` (user/assistant), `contenido`, `modelo_usado`, `timestamp`
 - **`feedback`**: `id`, `mensaje_id`, `calificacion`, `sugerencia_ia_auditora`, `aprobado` (booleano)
 
-## 5. Seguridad
+### Seguridad
 
-- Las API keys se guardan siempre encriptadas en la base de datos, nunca en texto plano.
-- El widget de JS solo maneja el `chatbot_id` público, nunca una key real.
-- CORS configurado para aceptar solicitudes solo desde los dominios registrados por cada chatbot (evita que alguien copie el snippet y lo use sin permiso) — se puede dejar para una segunda iteración si complica el desarrollo inicial.
-- El archivo `.env` con las keys propias del backend (NVIDIA, Gemini, etc.) nunca se sube a git — debe estar en `.gitignore` desde el primer commit.
+Las API keys se guardan en texto plano por ahora (encriptación pendiente, ver Próximos pasos).
 
-## Stack tecnológico (resumen)
+## 5. Stack tecnológico (resumen)
 
 | Pieza | Tecnología |
 |---|---|
 | Widget embebible | JavaScript vanilla |
 | Backend | Python 3.x + FastAPI + Uvicorn |
 | Panel de administración | Streamlit |
-| Base de datos | Neon o Supabase (Postgres) |
-| Proveedores de IA | NVIDIA NIM (DeepSeek V4 Flash, Nemotron), Groq, Gemini |
-| Hosting del backend | Render o Vercel (a decidir) |
+| Base de datos | InsForge (PostgreSQL) |
+| Proveedores de IA | NVIDIA NIM (DeepSeek V4 Flash, Nemotron 3 Ultra), Gemini 3.1 Pro Preview |
+| Hosting del backend | Render u otro servicio compatible (sugerencia) |
+| Hosting del admin | Streamlit Community Cloud u otro (sugerencia) |
 
-## Estructura de carpetas sugerida
+## Estructura de carpetas real
+
+Todos los archivos están directamente en la raíz del proyecto:
 
 ```
-proyecto/
-├── widget/
-│   └── widget.js
-├── backend/
-│   ├── main.py
-│   ├── models/
-│   ├── routers/
-│   │   ├── chat.py
-│   │   └── admin.py
-│   ├── db/
-│   └── requirements.txt
-├── admin_panel/
-│   └── app.py          (Streamlit)
-└── .env
+SDK-Chatbot/
+├── widget.js
+├── test.html
+├── .env.example
+├── .gitignore
+├── README.md
+├── contexto.md
+├── requirements.txt
+├── main.py
+├── chat.py
+├── admin.py
+├── app.py
 ```
 
-## Próximos pasos (para ir marcando conforme se avance)
+## Próximos pasos
 
-- [ ] Crear la estructura de carpetas base del proyecto.
-- [ ] Backend: endpoint `/api/chat` funcional con un solo proveedor (DeepSeek vía NVIDIA NIM), sin fallback todavía.
-- [ ] Backend: agregar la lógica de fallback a los demás proveedores.
-- [ ] Widget: HTML/CSS/JS básico, hablando con el backend corriendo en local.
-- [ ] Base de datos: definir el esquema real y conectar el backend a ella.
-- [ ] Panel de Streamlit: formulario básico de configuración de un chatbot.
+- [x] Crear la estructura de carpetas base del proyecto.
+- [x] Backend: endpoint `/api/chat` funcional con un solo proveedor (DeepSeek vía NVIDIA NIM), sin fallback todavía.
+- [x] Backend: agregar la lógica de fallback a los demás proveedores (Nemotron, Gemini) y fallback personalizado por chatbot.
+- [x] Widget: HTML/CSS/JS básico, hablando con el backend corriendo en local.
+- [x] Base de datos: definir el esquema real y conectar el backend a InsForge.
+- [x] Panel de Streamlit: formulario básico de configuración de un chatbot (sin login).
 - [ ] Probar todo el flujo de punta a punta: configurar en Streamlit → pegar el widget en una página HTML de prueba → chatear → ver el log en la base de datos.
 
 ## Notas para Claude Code
 
-- Este proyecto usa **Nemotron 3 / DeepSeek vía NVIDIA NIM** como modelo de asistencia de código (conectado a través de un proxy llamado Free Claude Code), no el modelo real de Anthropic. Ten esto en cuenta si el modelo alguna vez "alucina" ser otra cosa o inventa comandos que no existen — verificar siempre con `/help` dentro de la sesión.
+- Este proyecto usa **Nemotron 3 Ultra / DeepSeek V4 Flash vía NVIDIA NIM** como modelo de asistencia de código (conectado a través de un proxy llamado Free Claude Code), no el modelo real de Anthropic. Ten esto en cuenta si el modelo alguna vez "alucina" ser otra cosa o inventa comandos que no existen — verificar siempre con `/help` dentro de la sesión.
 - Prioriza avanzar en el orden de la lista de "Próximos pasos" de arriba, un punto a la vez, en vez de intentar construir todo de golpe.
-- Cuando falte una decisión (por ejemplo, Neon vs Supabase, o si se incluye Groq en el fallback), pregunta en vez de asumir.
+- Cuando falte una decisión (por ejemplo, si se incluye Groq en el fallback — actualmente no), pregunta en vez de asumir.
+
+## Repositorio en GitHub
+
+El código fuente ya está disponible en:  
+https://github.com/EstefGlez/SDK-Chatbot
