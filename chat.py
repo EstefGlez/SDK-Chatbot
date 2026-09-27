@@ -65,6 +65,7 @@ def get_or_create_conversation(chatbot_id: str, session_id: str) -> str:
         response.raise_for_status()
         data = response.json()
         if data:
+            print(f"GET {url} status: {response.status_code}, body: {response.text}")
             return data[0]["id"]
         # Create new conversation
         import uuid
@@ -73,6 +74,7 @@ def get_or_create_conversation(chatbot_id: str, session_id: str) -> str:
         payload = [{"id": conversation_id, "chatbot_id": chatbot_id, "session_id": session_id}]
         response = requests.post(url, headers=_insforge_headers(), json=payload)
         response.raise_for_status()
+        print(f"POST {url} status: {response.status_code}, body: {response.text}")
         return conversation_id
     except Exception as e:
         print(f"Error getting/creating conversation in InsForge: {e}")
@@ -111,6 +113,43 @@ def save_message(conversacion_id: str, rol: str, contenido: str, modelo_usado: s
         # In a production system, we might want to retry or handle this more gracefully
         pass
 
+
+def get_conversation_history(conversacion_id: str, limit: int = 20) -> list:
+    """
+    Obtiene el historial de conversación para un conversation_id dado.
+    Regresa una lista de diccionarios en formato OpenAI API.
+    Lanza excepción si falla la consulta a InsForge.
+    """
+    try:
+        url = f"{INS_FORGE_BASE_URL}/mensajes"
+        params = {
+            "conversacion_id": f"eq.{conversacion_id}",
+            "order": "timestamp.asc",
+            "limit": str(limit)
+        }
+        response = requests.get(url, headers=_insforge_headers(), params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        # Convert to OpenAI format: [{"role": "...", "content": "..."}]
+        messages = []
+        for record in data:
+            # Assuming the DB has "rol" and "contenido" fields
+            messages.append({
+                "role": record.get("rol", "user"),  # Default to user if missing
+                "content": record.get("contenido", "")
+            })
+        return messages
+    except Exception as e:
+        print(f"Error fetching conversation history from InsForge: {e}")
+        # Print response text if available (for InsForge API error details)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                print(f"InsForge response: {e.response.text}")
+            except:
+                print(f"InsForge response status: {e.response.status_code}")
+        raise  # Re-raise the exception so caller knows it failed
+
 class ChatRequest(BaseModel):
     chatbot_id: str
     message: str
@@ -131,7 +170,7 @@ PROVIDERS = [
         "name": "deepseek_nim",
         "base_url": "https://integrate.api.nvidia.com/v1",
         "api_key_env": "DEEPSEEK_API_KEY",
-        "model": "deepseek-ai/deepseek-v4-flash-0731",
+        "model": "deepseek-ai/deepseek-v4.1-flash",
     },
     {
         "name": "nemotron_nim",
@@ -212,12 +251,19 @@ def chat_endpoint(req: ChatRequest):
     # Guardar mensaje del usuario
     save_message(conversation_id, "user", req.message, None)
 
-    # Construir mensajes para la IA (solo system prompt y mensaje actual por ahora)
-    # TODO: recuperar historial de la conversación para dar memoria real
-    messages = [
-        {"role": "system", "content": config["system_prompt"]},
-        {"role": "user", "content": req.message}
-    ]
+    # Construir mensajes para la IA
+    try:
+        # Obtener historial de conversación (incluye el mensaje actual que acabamos de guardar)
+        history = get_conversation_history(conversation_id)
+        # El historial ya está en formato OpenAI: [{"role": "...", "content": "..."}]
+        messages = [{"role": "system", "content": config["system_prompt"]}] + history
+    except Exception as e:
+        # Si falla obtener el historial, caer al comportamiento original
+        print(f"Warning: Falling back to basic conversation mode: {e}")
+        messages = [
+            {"role": "system", "content": config["system_prompt"]},
+            {"role": "user", "content": req.message}
+        ]
 
     reply, model_used = call_with_fallback(messages, config)
 
