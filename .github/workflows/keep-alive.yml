@@ -1,0 +1,14 @@
+name: Keep InsForge Alive
+on:
+  schedule:
+    - cron: "0 12 */3 * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping InsForge
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.INSFORGE_ANON_KEY }}" \
+            "${{ secrets.INSFORGE_BASE_URL }}/chatbots?limit=1"
